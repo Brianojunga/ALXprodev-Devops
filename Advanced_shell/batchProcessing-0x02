@@ -1,0 +1,35 @@
+#!bin/bash
+OUTPUT = "report.csv"
+
+# Write CSV header
+echo "name,height_m,weight_kg" > $OUTPUT
+
+# Loop through all JSON files
+for file in *.json; do
+    # Extract values using jq
+    name=$(jq -r '.name' "$file")
+    raw_height=$(jq -r '.height' "$file")   # in decimeters
+    raw_weight=$(jq -r '.weight' "$file")   # in hectograms
+
+    # Convert units using awk:
+    # height dm → m, weight hg → kg
+    height_m=$(awk "BEGIN { printf \"%.1f\", $raw_height/10 }")
+    weight_kg=$(awk "BEGIN { printf \"%.1f\", $raw_weight/10 }")
+
+    # Append to CSV
+    echo "$name,$height_m,$weight_kg" >> $OUTPUT
+done
+
+# Use awk to calculate averages
+echo "----- Averages -----"
+awk -F',' '
+NR>1 {
+    total_height += $2
+    total_weight += $3
+    count++
+}
+END {
+    printf "Average Height: %.2fm\n", total_height / count
+    printf "Average Weight: %.2fkg\n", total_weight / count
+}
+' report.csv
