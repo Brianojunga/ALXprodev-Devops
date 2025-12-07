@@ -1,21 +1,46 @@
 #!/bin/bash
 
 pokemon_list=("bulbasaur" "ivysaur" "venusaur" "charmander" "charmeleon")
+ERROR_LOG="errors.txt"
 
 for pokemon in "${pokemon_list[@]}"; do
     echo "Fetching data for $pokemon..."
 
-    # API URL
     URL="https://pokeapi.co/api/v2/pokemon/$pokemon"
-
-    # Output JSON file
     OUTPUT="${pokemon}.json"
 
-    # Perform request
-    curl -s "$URL" -o "$OUTPUT"
+    # Retry logic: up to 3 attempts
+    attempt=1
+    success=false
 
-    # Add delay to avoid rate-limits
+    while [ $attempt -le 3 ]; do
+        echo "  Attempt $attempt..."
+
+        # Make the request
+        status=$(curl -s -w "%{http_code}" -o "$OUTPUT" "$URL")
+
+        if [ "$status" -eq 200 ]; then
+            echo "  Success! Saved to $OUTPUT"
+            success=true
+            break
+        else
+            echo "Failed with status $status"
+            rm -f "$OUTPUT"      
+            sleep 1             
+        fi
+
+        attempt=$((attempt + 1))
+    done
+
+    # If all retries failed
+    if [ "$success" = false ]; then
+        echo "[$(date)] Failed to fetch $pokemon after 3 attempts. Status: $status" >> "$ERROR_LOG"
+        echo "  Logged error and skipping $pokemon"
+    fi
+
+    # Delay to avoid rate limiting between Pokémon
     sleep 1
-
-    echo "Saved $OUTPUT"
+    echo "----------------------"
 done
+
+echo "Done!"
