@@ -1,50 +1,32 @@
 #!/bin/bash
 
-POKEMONS=("Bulbasaur" "Ivysaur" "Venusaur" "Charmander" "Charmeleon")
-API_URL="https://pokeapi.co/api/v2/pokemon"
-TIMEOUT=8   # seconds
+pokemon_list=("bulbasaur" "ivysaur" "venusaur" "charmander" "charmeleon")
+ERROR_LOG="errors.txt"
 
-# Directory for JSON outputs
-mkdir -p pokemon_data
+echo "Starting parallel fetch..."
 
-fetch_pokemon() {
-    local name=$(echo "$1" | tr '[:upper:]' '[:lower:]')
-    local outfile="pokemon_data/${name}.json"
+for pokemon in "${pokemon_list[@]}"; do
+    {
+        echo "Fetching $pokemon..."
 
-    echo "Fetching $name..."
+        URL="https://pokeapi.co/api/v2/pokemon/$pokemon"
+        OUTPUT="${pokemon}.json"
 
-    # Run curl in background with PID capture
-    curl -s "$API_URL/$name" > "$outfile" &
-    pid=$!
+        # Make request
+        status=$(curl -s -w "%{http_code}" -o "$OUTPUT" "$URL")
 
-    # Store PID + name
-    echo "$pid $name" >> process_list.txt
-
-    # Enforce timeout
-    sleep "$TIMEOUT"
-
-    # If still running, kill it
-    if kill -0 "$pid" 2>/dev/null; then
-        echo "Timeout reached — killing $name process"
-        kill "$pid"
-    fi
-}
-
-# Clean previous process list
-> process_list.txt
-
-# Start all fetches in parallel
-for pokemon in "${POKEMONS[@]}"; do
-    fetch_pokemon "$pokemon" &
+        # Check success
+        if [ "$status" -ne 200 ]; then
+            echo "[$(date)] Failed to fetch $pokemon. Status: $status" >> "$ERROR_LOG"
+            rm -f "$OUTPUT"     # Remove bad file
+            echo "$pokemon FAILED"
+        else
+            echo "$pokemon DONE"
+        fi
+    } &
 done
 
-# Wait for all active processes
-while read -r pid pname; do
-    if kill -0 "$pid" 2>/dev/null; then
-        echo "Waiting for $pname (PID $pid)..."
-        wait "$pid"
-    fi
-done < process_list.txt
+# Wait for all background jobs to complete
+wait
 
-echo "All Pokémon data fetched successfully."
-rm process_list.txt
+echo "All parallel requests complete."
