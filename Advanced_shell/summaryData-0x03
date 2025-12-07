@@ -11,6 +11,8 @@ for file in *.json; do
     raw_height=$(jq -r '.height' "$file")   # in decimeters
     raw_weight=$(jq -r '.weight' "$file")   # in hectograms
 
+    name=$(echo "$name" | sed 's/.*/\u&/')
+
     # Convert units using awk:
     # height dm → m, weight hg → kg
     height_m=$(awk "BEGIN { printf \"%.1f\", $raw_height/10 }")
