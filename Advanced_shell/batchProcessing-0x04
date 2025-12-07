@@ -1,0 +1,32 @@
+#!/bin/bash
+
+pokemon_list=("bulbasaur" "ivysaur" "venusaur" "charmander" "charmeleon")
+ERROR_LOG="errors.txt"
+
+echo "Starting parallel fetch..."
+
+for pokemon in "${pokemon_list[@]}"; do
+    {
+        echo "Fetching $pokemon..."
+
+        URL="https://pokeapi.co/api/v2/pokemon/$pokemon"
+        OUTPUT="${pokemon}.json"
+
+        # Make request
+        status=$(curl -s -w "%{http_code}" -o "$OUTPUT" "$URL")
+
+        # Check success
+        if [ "$status" -ne 200 ]; then
+            echo "[$(date)] Failed to fetch $pokemon. Status: $status" >> "$ERROR_LOG"
+            rm -f "$OUTPUT"     # Remove bad file
+            echo "$pokemon FAILED"
+        else
+            echo "$pokemon DONE"
+        fi
+    } &
+done
+
+# Wait for all background jobs to complete
+wait
+
+echo "All parallel requests complete."
