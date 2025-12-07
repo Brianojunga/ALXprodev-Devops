@@ -1,0 +1,16 @@
+#!bin/bash
+
+name = $(jq -r '.name' data.json)
+height=$(jq -r '.height' data.json)
+weight=$(jq -r '.weight' data.json)
+type=$(jq -r '.types[0].type.name' data.json)
+
+# Convert raw API values to proper units
+height_m=$(echo "$height / 10" | bc -l)
+weight_kg=$(echo "$weight / 10" | bc -l)
+
+# Format output using sed and awk to clean numbers
+height_m=$(printf "%.1f" "$height_m" | sed 's/^\./0./')
+weight_kg=$(printf "%.0f" "$weight_kg")
+
+echo "$name is of type $type, weighs ${weight_kg}kg, and is ${height_m}m tall."
