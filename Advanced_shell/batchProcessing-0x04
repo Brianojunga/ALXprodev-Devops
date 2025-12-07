@@ -26,6 +26,11 @@ for pokemon in "${pokemon_list[@]}"; do
     } &
 done
 
+echo "Current background jobs:"
+jobs
+
+# kill $(jobs -p)
+
 # Wait for all background jobs to complete
 wait
 
